@@ -28,10 +28,6 @@ import {
   Municipality,
 } from "@/data/locations";
 
-/* ===============================
-   VALIDACIÓN DNI / NIE / CIF
-================================ */
-
 export const validateDniCif = (
   value: string
 ): { valid: boolean; message?: string } => {
@@ -43,7 +39,7 @@ export const validateDniCif = (
   if (/^[XYZ]\d{7}[A-Z]$/.test(v)) return validarNIE(v);
   if (/^[ABCDEFGHJKLMNPQRSUVW]\d{7}[0-9A-J]$/.test(v)) return validarCIF(v);
 
-  return { valid: false, message: "Formato no válido" };
+  return { valid: false, message: "Formato no valido" };
 };
 
 const validarDNI = (dni: string) => {
@@ -54,7 +50,7 @@ const validarDNI = (dni: string) => {
 };
 
 const validarNIE = (nie: string) => {
-  const map: any = { X: "0", Y: "1", Z: "2" };
+  const map: Record<string, string> = { X: "0", Y: "1", Z: "2" };
   const letras = "TRWAGMYFPDXBNJZSQVHLCKE";
   const num = parseInt(map[nie[0]] + nie.substring(1, 8));
   return nie[8] === letras[num % 23]
@@ -78,38 +74,28 @@ const validarCIF = (cif: string) => {
   const control = (10 - (suma % 10)) % 10;
   return cif[8] === control.toString() || cif[8] === letras[control]
     ? { valid: true }
-    : { valid: false, message: "CIF inválido" };
+    : { valid: false, message: "CIF invalido" };
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-
-/* ===============================
-   PROPS
-================================ */
 
 interface ClientFormProps {
   ticketDate: string;
   ticketNumber: string;
   ticketSeries: string;
   ticketAmount: string;
-  cifDNI: string;
-  // Datos de empresa para la cláusula RGPD — se resuelven en Index.tsx
-  // FIX DEUDA TÉCNICA: nombres descriptivos y semánticamente correctos
-  nombreEmpresa: string;   // Razón social de la empresa
-  cifDniEmpresa: string;   // Identificador fiscal (NIF/CIF) de la empresa
-  emailEmpresa: string;    // Email de contacto para ejercicio de derechos RGPD
+  codigoEmpresa: number | null;
+  nombreEmpresa: string;
+  cifDniEmpresa: string;
+  emailEmpresa: string;
 }
-
-/* ===============================
-   COMPONENTE
-================================ */
 
 export const ClientForm = ({
   ticketDate,
   ticketNumber,
   ticketSeries,
   ticketAmount,
-  cifDNI,
+  codigoEmpresa,
   nombreEmpresa,
   cifDniEmpresa,
   emailEmpresa,
@@ -132,30 +118,26 @@ export const ClientForm = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
-
-  // ── RGPD ──────────────────────────────────────────────────────────────────
   const [rgpdAccepted, setRgpdAccepted] = useState(false);
 
-  /* ===============================
-     CLÁUSULA LEGAL (template RGPD)
-     Los datos de empresa vienen por props desde Index.tsx,
-     que ya los carga desde /api/Empresa — sin fetch duplicado.
-  ================================ */
-
-  const clausulaLegal = useMemo(
-    () =>
-      `En cumplimiento del RGPD (UE) 679/2016, la LOPDGDD 3/2018 y la LSSI-CE 34/2002, ` +
-      `le informamos que sus datos son tratados por ${nombreEmpresa} (NIF ${cifDniEmpresa}) ` +
-      `para la gestión de relaciones comerciales y administrativas. ` +
-      `Puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación ` +
-      `y portabilidad enviando un correo a ${emailEmpresa} con el asunto ` +
-      `"Derechos Ley Protección de Datos" y copia de su DNI.`,
-    [nombreEmpresa, cifDniEmpresa, emailEmpresa]
+  const hasCompanyData = Boolean(
+    codigoEmpresa !== null && nombreEmpresa && cifDniEmpresa && emailEmpresa,
   );
 
-  /* ===============================
-     CARGA DE PROVINCIAS / MUNICIPIOS
-  ================================ */
+  const clausulaLegal = useMemo(() => {
+    if (!hasCompanyData) {
+      return "Selecciona una empresa valida para cargar la clausula legal.";
+    }
+
+    return (
+      `En cumplimiento del RGPD (UE) 679/2016, la LOPDGDD 3/2018 y la LSSI-CE 34/2002, ` +
+      `le informamos que sus datos son tratados por ${nombreEmpresa} (NIF ${cifDniEmpresa}) ` +
+      `para la gestion de relaciones comerciales y administrativas. ` +
+      `Puede ejercer sus derechos de acceso, rectificacion, supresion, oposicion, limitacion ` +
+      `y portabilidad enviando un correo a ${emailEmpresa} con el asunto ` +
+      `"Derechos Ley Proteccion de Datos" y copia de su DNI.`
+    );
+  }, [hasCompanyData, nombreEmpresa, cifDniEmpresa, emailEmpresa]);
 
   useEffect(() => {
     getProvincesByCountry(country).then(setProvinces);
@@ -167,27 +149,24 @@ export const ClientForm = ({
     }
   }, [province]);
 
-  /* ===============================
-     VALIDACIÓN
-  ================================ */
+  useEffect(() => {
+    setRgpdAccepted(false);
+  }, [codigoEmpresa, nombreEmpresa, cifDniEmpresa, emailEmpresa]);
 
   const isFormValid = useMemo(() => {
-    return (
+    return Boolean(
       validateDniCif(dni).valid &&
-      name &&
-      address &&
-      postalCode &&
-      email &&
-      country &&
-      province &&
-      municipality &&
-      ticketDate &&
-      ticketNumber &&
-      cifDNI &&
-      ticketAmount &&
-      rgpdAccepted  // ← El formulario sólo es válido si el usuario ha aceptado el RGPD
-      //TODO: DESCOMENTAR CUANDO SE HAGA OBLIGATORIO EL CAMPO DE SERIE
-      //&&ticketSeries
+        name &&
+        address &&
+        postalCode &&
+        email &&
+        country &&
+        province &&
+        municipality &&
+        ticketDate &&
+        ticketNumber &&
+        ticketAmount &&
+        hasCompanyData
     );
   }, [
     dni,
@@ -202,13 +181,8 @@ export const ClientForm = ({
     ticketNumber,
     ticketSeries,
     ticketAmount,
-    cifDNI,
-    rgpdAccepted,
+    hasCompanyData,
   ]);
-
-  /* ===============================
-     ENVÍO
-  ================================ */
 
   const handleGenerateInvoice = async () => {
     setApiError(null);
@@ -219,36 +193,40 @@ export const ClientForm = ({
       return;
     }
 
+    if (!hasCompanyData || codigoEmpresa === null) {
+      setApiError("Debes seleccionar una empresa valida");
+      return;
+    }
+
     if (!isFormValid) {
       setApiError("Debes rellenar todos los campos");
       return;
     }
 
-    const selectedProvince = provinces.find(p => p.code === province);
-    const selectedMunicipality = municipalities.find(m => m.code === municipality);
+    if (!rgpdAccepted) {
+      setApiError("Debes aceptar la politica de privacidad");
+      return;
+    }
+
+    const selectedProvince = provinces.find((p) => p.code === province);
+    const selectedMunicipality = municipalities.find((m) => m.code === municipality);
 
     const payload = {
+      codigoEmpresa,
       serieAlbaran: ticketSeries,
       tpvNumeroFactura: Number(ticketNumber),
       fechaAlbaran: new Date(ticketDate).toISOString(),
       importeTotal: parseFloat(ticketAmount),
-
-      // FIX DEUDA TÉCNICA: cifDniEmpresa contiene el identificador fiscal
-      // real de la empresa (CIF/NIF), no el nombre.
-      cifDniEmpresa: cifDNI,
-
+      cifDniEmpresa,
       dni,
       siglaNacion: country,
       razonSocial: name,
       domicilio: address,
       codigoPostal: postalCode,
-
       municipio: selectedMunicipality?.name,
       codigoMunicipio: selectedMunicipality?.code,
-
       provincia: selectedProvince?.name,
       codigoProvincia: selectedProvince?.code,
-
       nacion: "ESPAÑA",
       codigoNacion: 108,
       email,
@@ -276,10 +254,6 @@ export const ClientForm = ({
     }
   };
 
-  /* ===============================
-     JSX
-  ================================ */
-
   return (
     <div className="card-elevated p-6 space-y-5">
       <div className="flex items-center gap-3 mb-4">
@@ -287,18 +261,18 @@ export const ClientForm = ({
         <h2 className="text-xl font-semibold">Datos del Cliente</h2>
       </div>
 
-      <Input placeholder="CIF / DNI" value={dni} onChange={e => setDni(e.target.value.toUpperCase())} />
+      <Input placeholder="CIF / DNI" value={dni} onChange={(e) => setDni(e.target.value.toUpperCase())} />
       {dniError && <p className="text-red-600 text-sm">{dniError}</p>}
 
-      <Input placeholder="Nombre / Razón Social" value={name} onChange={e => setName(e.target.value)} />
-      <Input placeholder="Correo electrónico" value={email} onChange={e => setEmail(e.target.value)} />
-      <Input placeholder="Domicilio" value={address} onChange={e => setAddress(e.target.value)} />
-      <Input placeholder="Código Postal" value={postalCode} onChange={e => setPostalCode(e.target.value)} />
+      <Input placeholder="Nombre / Razon Social" value={name} onChange={(e) => setName(e.target.value)} />
+      <Input placeholder="Correo electronico" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Input placeholder="Domicilio" value={address} onChange={(e) => setAddress(e.target.value)} />
+      <Input placeholder="Codigo Postal" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} />
 
       <Select value={country} onValueChange={setCountry}>
         <SelectTrigger><SelectValue /></SelectTrigger>
         <SelectContent>
-          {countries.map(c => (
+          {countries.map((c) => (
             <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
           ))}
         </SelectContent>
@@ -307,7 +281,7 @@ export const ClientForm = ({
       <Select value={province} onValueChange={setProvince}>
         <SelectTrigger><SelectValue placeholder="Provincia" /></SelectTrigger>
         <SelectContent>
-          {provinces.map(p => (
+          {provinces.map((p) => (
             <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>
           ))}
         </SelectContent>
@@ -316,16 +290,13 @@ export const ClientForm = ({
       <Select value={municipality} onValueChange={setMunicipality}>
         <SelectTrigger><SelectValue placeholder="Municipio" /></SelectTrigger>
         <SelectContent>
-          {municipalities.map(m => (
+          {municipalities.map((m) => (
             <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>
           ))}
         </SelectContent>
       </Select>
 
-      {/* ── RGPD: Checkbox + Botón (alineados en la misma fila) ── */}
-      <div className="flex items-start gap-4 pt-2">
-
-        {/* Izquierda: checkbox + cláusula legal */}
+      <div className="flex flex-col gap-4 pt-2 md:flex-row md:items-start">
         <div className="flex items-start gap-2 flex-1">
           <Checkbox
             id="rgpd-checkbox"
@@ -341,25 +312,22 @@ export const ClientForm = ({
           </Label>
         </div>
 
-        {/* Derecha: botón de acción */}
-        <div className="shrink-0 self-end">
+        <div className="shrink-0 md:self-end">
           <Button
-            disabled={!isFormValid || loading}
+            disabled={!isFormValid || !rgpdAccepted || loading}
             onClick={handleGenerateInvoice}
           >
             {loading ? "Generando..." : "Generar factura"}
           </Button>
         </div>
-
       </div>
 
-      {/* POPUP ÉXITO */}
       <AlertDialog open={successOpen} onOpenChange={setSuccessOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Factura generada</AlertDialogTitle>
             <AlertDialogDescription>
-              La factura llegará al correo electrónico indicado en menos de 24 horas.
+              La factura llegara al correo electronico indicado en menos de 24 horas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -368,7 +336,6 @@ export const ClientForm = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* POPUP DE ERROR */}
       <AlertDialog open={!!apiError} onOpenChange={() => setApiError(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

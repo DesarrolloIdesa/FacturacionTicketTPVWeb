@@ -1,47 +1,42 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/Header";
 import { TicketForm } from "@/components/TicketForm";
 import { ClientForm } from "@/components/ClientForm";
 
+interface Company {
+  codigoEmpresa: number;
+  nombre: string;
+  anagrama: string;
+  cifDni: string;
+  email: string;
+}
+
+const normalizeCompanyValue = (value: string | null | undefined) =>
+  value?.trim().toLowerCase() ?? "";
+
 const Index = () => {
-
-  interface Company {
-    codigoEmpresa: number;
-    nombre: string;
-    anagrama: string;
-    cifDni: string;
-    email: string;  // ← añadido para la cláusula RGPD
-  }
-
-  // Ticket data
   const [ticketDate, setTicketDate] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
   const [ticketSeries, setTicketSeries] = useState("");
   const [ticketAmount, setTicketAmount] = useState("");
-  const [cifDNI, setCifDNI] = useState("");
+  const [nombreEmpresaParam, setNombreEmpresaParam] = useState("");
 
-  // Empresas
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-  // Cargar empresas desde la API al montar
   useEffect(() => {
     const init = async () => {
-      // 1️⃣ Leer parámetros URL
       const params = new URLSearchParams(window.location.search);
 
       const fecha = params.get("fecha");
       const serie = params.get("Serie");
       const numTicket = params.get("NumTicket");
+      const nombreEmpresa = params.get("nombreEmpresa");
 
-      // FIX DEUDA TÉCNICA: el parámetro URL "nombreEmpresa" contenía en
-      // realidad el CIF/NIF de la empresa. Se renombra la variable local
-      // para que refleje su contenido real.
-      const cifDniParam = params.get("nombreEmpresa");
-      if (cifDniParam) {
-        setCifDNI(cifDniParam);
+      if (nombreEmpresa) {
+        setNombreEmpresaParam(nombreEmpresa);
       }
 
       if (fecha) {
@@ -58,22 +53,35 @@ const Index = () => {
       if (serie) setTicketSeries(serie);
       if (numTicket) setTicketNumber(numTicket);
 
-      // 2️⃣ Cargar empresas (estos datos se pasan a ClientForm para la cláusula RGPD)
       try {
         const res = await fetch(`${API_BASE_URL}/api/Empresa`);
-        const data = await res.json();
+        const data: Company[] = await res.json();
         setCompanies(data);
-        if (data.length > 0) setSelectedCompany(data[0].codigoEmpresa);
+
+        if (data.length === 0) return;
+
+        const normalizedParam = normalizeCompanyValue(nombreEmpresa);
+        const matchedCompany = data.find((company) =>
+          [company.nombre, company.anagrama, company.cifDni].some(
+            (value) => normalizeCompanyValue(value) === normalizedParam,
+          ),
+        );
+
+        setSelectedCompany((matchedCompany ?? data[0]).codigoEmpresa);
       } catch (err) {
         console.error("Error cargando empresas", err);
       }
     };
 
     init();
-  }, []);
+  }, [API_BASE_URL]);
 
-  // Empresa actualmente seleccionada (para pasar sus datos al ClientForm)
-  const empresaActual = companies.find(c => c.codigoEmpresa === selectedCompany);
+  const empresaActual = useMemo(
+    () => companies.find((company) => company.codigoEmpresa === selectedCompany) ?? null,
+    [companies, selectedCompany],
+  );
+
+  const nombreEmpresa = empresaActual?.nombre ?? nombreEmpresaParam;
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,48 +95,45 @@ const Index = () => {
 
         <main className="max-w-4xl mx-auto px-4 pb-12">
           <div className="space-y-6">
+            {companies.length > 0 && (
+              <div className="card-elevated p-6 animate-fade-in-up">
+                <label htmlFor="company" className="block font-medium mb-1">
+                  Empresa
+                </label>
+                <select
+                  id="company"
+                  value={selectedCompany ?? ""}
+                  onChange={(e) => setSelectedCompany(Number(e.target.value))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {companies.map((company) => (
+                    <option key={company.codigoEmpresa} value={company.codigoEmpresa}>
+                      {company.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            {/* Selector de empresa */}
-            {/* <div>
-              <label htmlFor="company" className="block font-medium mb-1">
-                Empresa
-              </label>
-              <select
-                id="company"
-                value={selectedCompany ?? ""}
-                onChange={(e) => setSelectedCompany(Number(e.target.value))}
-                className="border rounded p-2 w-full"
-              >
-                {companies.map((c) => (
-                  <option key={c.codigoEmpresa} value={c.codigoEmpresa}>
-                    {c.nombre}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-
-            {/* Ticket */}
             <TicketForm
               ticketDate={ticketDate}
               ticketNumber={ticketNumber}
               ticketSeries={ticketSeries}
               ticketAmount={ticketAmount}
-              cifDNI={cifDNI}
+              nombreEmpresa={nombreEmpresa}
               onTicketDateChange={setTicketDate}
               onTicketNumberChange={setTicketNumber}
               onTicketSeriesChange={setTicketSeries}
               onTicketAmountChange={setTicketAmount}
             />
 
-            {/* Cliente + Generar factura */}
             <ClientForm
               ticketDate={ticketDate}
               ticketNumber={ticketNumber}
               ticketSeries={ticketSeries}
               ticketAmount={ticketAmount}
-              cifDNI={cifDNI}
-              // Datos de empresa para la cláusula RGPD
-              nombreEmpresa={empresaActual?.nombre ?? ""}
+              codigoEmpresa={empresaActual?.codigoEmpresa ?? null}
+              nombreEmpresa={nombreEmpresa}
               cifDniEmpresa={empresaActual?.cifDni ?? ""}
               emailEmpresa={empresaActual?.email ?? ""}
             />
