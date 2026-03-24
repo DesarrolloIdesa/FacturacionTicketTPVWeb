@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle, User } from "lucide-react";
+import { User } from "lucide-react";
 import {
   countries,
   getProvincesByCountry,
@@ -92,6 +93,11 @@ interface ClientFormProps {
   ticketSeries: string;
   ticketAmount: string;
   cifDNI: string;
+  // Datos de empresa para la cláusula RGPD — se resuelven en Index.tsx
+  // FIX DEUDA TÉCNICA: nombres descriptivos y semánticamente correctos
+  nombreEmpresa: string;   // Razón social de la empresa
+  cifDniEmpresa: string;   // Identificador fiscal (NIF/CIF) de la empresa
+  emailEmpresa: string;    // Email de contacto para ejercicio de derechos RGPD
 }
 
 /* ===============================
@@ -104,6 +110,9 @@ export const ClientForm = ({
   ticketSeries,
   ticketAmount,
   cifDNI,
+  nombreEmpresa,
+  cifDniEmpresa,
+  emailEmpresa,
 }: ClientFormProps) => {
   const [dni, setDni] = useState("");
   const [dniError, setDniError] = useState<string | null>(null);
@@ -123,6 +132,26 @@ export const ClientForm = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
+
+  // ── RGPD ──────────────────────────────────────────────────────────────────
+  const [rgpdAccepted, setRgpdAccepted] = useState(false);
+
+  /* ===============================
+     CLÁUSULA LEGAL (template RGPD)
+     Los datos de empresa vienen por props desde Index.tsx,
+     que ya los carga desde /api/Empresa — sin fetch duplicado.
+  ================================ */
+
+  const clausulaLegal = useMemo(
+    () =>
+      `En cumplimiento del RGPD (UE) 679/2016, la LOPDGDD 3/2018 y la LSSI-CE 34/2002, ` +
+      `le informamos que sus datos son tratados por ${nombreEmpresa} (NIF ${cifDniEmpresa}) ` +
+      `para la gestión de relaciones comerciales y administrativas. ` +
+      `Puede ejercer sus derechos de acceso, rectificación, supresión, oposición, limitación ` +
+      `y portabilidad enviando un correo a ${emailEmpresa} con el asunto ` +
+      `"Derechos Ley Protección de Datos" y copia de su DNI.`,
+    [nombreEmpresa, cifDniEmpresa, emailEmpresa]
+  );
 
   /* ===============================
      CARGA DE PROVINCIAS / MUNICIPIOS
@@ -155,7 +184,8 @@ export const ClientForm = ({
       ticketDate &&
       ticketNumber &&
       cifDNI &&
-      ticketAmount
+      ticketAmount &&
+      rgpdAccepted  // ← El formulario sólo es válido si el usuario ha aceptado el RGPD
       //TODO: DESCOMENTAR CUANDO SE HAGA OBLIGATORIO EL CAMPO DE SERIE
       //&&ticketSeries
     );
@@ -173,6 +203,7 @@ export const ClientForm = ({
     ticketSeries,
     ticketAmount,
     cifDNI,
+    rgpdAccepted,
   ]);
 
   /* ===============================
@@ -197,13 +228,13 @@ export const ClientForm = ({
     const selectedMunicipality = municipalities.find(m => m.code === municipality);
 
     const payload = {
-      //codigoEmpresa: companyCode,
-
       serieAlbaran: ticketSeries,
       tpvNumeroFactura: Number(ticketNumber),
       fechaAlbaran: new Date(ticketDate).toISOString(),
       importeTotal: parseFloat(ticketAmount),
 
+      // FIX DEUDA TÉCNICA: cifDniEmpresa contiene el identificador fiscal
+      // real de la empresa (CIF/NIF), no el nombre.
       cifDniEmpresa: cifDNI,
 
       dni,
@@ -291,11 +322,36 @@ export const ClientForm = ({
         </SelectContent>
       </Select>
 
-      {/* {apiError && <p className="text-red-600 text-sm">{apiError}</p>} */}
+      {/* ── RGPD: Checkbox + Botón (alineados en la misma fila) ── */}
+      <div className="flex items-start gap-4 pt-2">
 
-      <Button disabled={!isFormValid || loading} onClick={handleGenerateInvoice}>
-        {loading ? "Generando..." : "Generar factura"}
-      </Button>
+        {/* Izquierda: checkbox + cláusula legal */}
+        <div className="flex items-start gap-2 flex-1">
+          <Checkbox
+            id="rgpd-checkbox"
+            checked={rgpdAccepted}
+            onCheckedChange={(checked) => setRgpdAccepted(checked === true)}
+            className="mt-1 shrink-0"
+          />
+          <Label
+            htmlFor="rgpd-checkbox"
+            className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+          >
+            {clausulaLegal}
+          </Label>
+        </div>
+
+        {/* Derecha: botón de acción */}
+        <div className="shrink-0 self-end">
+          <Button
+            disabled={!isFormValid || loading}
+            onClick={handleGenerateInvoice}
+          >
+            {loading ? "Generando..." : "Generar factura"}
+          </Button>
+        </div>
+
+      </div>
 
       {/* POPUP ÉXITO */}
       <AlertDialog open={successOpen} onOpenChange={setSuccessOpen}>

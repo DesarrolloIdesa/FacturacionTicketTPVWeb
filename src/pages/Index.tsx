@@ -6,12 +6,12 @@ import { ClientForm } from "@/components/ClientForm";
 const Index = () => {
 
   interface Company {
-  codigoEmpresa: number;
-  nombre: string;
-  anagrama: string;
-  cifDni: string;
-}
-
+    codigoEmpresa: number;
+    nombre: string;
+    anagrama: string;
+    cifDni: string;
+    email: string;  // ← añadido para la cláusula RGPD
+  }
 
   // Ticket data
   const [ticketDate, setTicketDate] = useState("");
@@ -21,52 +21,59 @@ const Index = () => {
   const [cifDNI, setCifDNI] = useState("");
 
   // Empresas
-const [companies, setCompanies] = useState<Company[]>([]);
-const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<number | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL;
 
   // Cargar empresas desde la API al montar
-useEffect(() => {
-  const init = async () => {
-    // 1️⃣ Leer parámetros URL
-    const params = new URLSearchParams(window.location.search);
+  useEffect(() => {
+    const init = async () => {
+      // 1️⃣ Leer parámetros URL
+      const params = new URLSearchParams(window.location.search);
 
-    const fecha = params.get("fecha");
-    const serie = params.get("Serie");
-    const numTicket = params.get("NumTicket");
-    const cif = params.get("nombreEmpresa");
-          if (cif) {
-            setCifDNI(cif);
-  }
+      const fecha = params.get("fecha");
+      const serie = params.get("Serie");
+      const numTicket = params.get("NumTicket");
 
-    if (fecha) {
-      if (fecha.includes("/")) {
-        const parts = fecha.split("/");
-        if (parts.length === 3) {
-          setTicketDate(`${parts[2]}-${parts[1]}-${parts[0]}`);
-        }
-      } else {
-        setTicketDate(fecha);
+      // FIX DEUDA TÉCNICA: el parámetro URL "nombreEmpresa" contenía en
+      // realidad el CIF/NIF de la empresa. Se renombra la variable local
+      // para que refleje su contenido real.
+      const cifDniParam = params.get("nombreEmpresa");
+      if (cifDniParam) {
+        setCifDNI(cifDniParam);
       }
-    }
 
-    if (serie) setTicketSeries(serie);
-    if (numTicket) setTicketNumber(numTicket);
+      if (fecha) {
+        if (fecha.includes("/")) {
+          const parts = fecha.split("/");
+          if (parts.length === 3) {
+            setTicketDate(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          }
+        } else {
+          setTicketDate(fecha);
+        }
+      }
 
-    // 2️⃣ Cargar empresas
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/Empresa`);
-      const data = await res.json();
-      setCompanies(data);
-      if (data.length > 0) setSelectedCompany(data[0].codigoEmpresa);
-    } catch (err) {
-      console.error("Error cargando empresas", err);
-    }
-  };
+      if (serie) setTicketSeries(serie);
+      if (numTicket) setTicketNumber(numTicket);
 
-  init();
-}, []);
+      // 2️⃣ Cargar empresas (estos datos se pasan a ClientForm para la cláusula RGPD)
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/Empresa`);
+        const data = await res.json();
+        setCompanies(data);
+        if (data.length > 0) setSelectedCompany(data[0].codigoEmpresa);
+      } catch (err) {
+        console.error("Error cargando empresas", err);
+      }
+    };
+
+    init();
+  }, []);
+
+  // Empresa actualmente seleccionada (para pasar sus datos al ClientForm)
+  const empresaActual = companies.find(c => c.codigoEmpresa === selectedCompany);
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,7 +89,7 @@ useEffect(() => {
           <div className="space-y-6">
 
             {/* Selector de empresa */}
-           {/* <div>
+            {/* <div>
               <label htmlFor="company" className="block font-medium mb-1">
                 Empresa
               </label>
@@ -100,7 +107,6 @@ useEffect(() => {
               </select>
             </div> */}
 
-
             {/* Ticket */}
             <TicketForm
               ticketDate={ticketDate}
@@ -114,8 +120,6 @@ useEffect(() => {
               onTicketAmountChange={setTicketAmount}
             />
 
-            
-
             {/* Cliente + Generar factura */}
             <ClientForm
               ticketDate={ticketDate}
@@ -123,7 +127,10 @@ useEffect(() => {
               ticketSeries={ticketSeries}
               ticketAmount={ticketAmount}
               cifDNI={cifDNI}
-              //companyCode={selectedCompany} // <-- Pasamos la empresa seleccionada
+              // Datos de empresa para la cláusula RGPD
+              nombreEmpresa={empresaActual?.nombre ?? ""}
+              cifDniEmpresa={empresaActual?.cifDni ?? ""}
+              emailEmpresa={empresaActual?.email ?? ""}
             />
           </div>
         </main>
