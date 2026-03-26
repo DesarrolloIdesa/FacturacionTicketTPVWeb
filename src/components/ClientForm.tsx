@@ -121,7 +121,7 @@ export const ClientForm = ({
   const [rgpdAccepted, setRgpdAccepted] = useState(false);
 
   const hasCompanyData = Boolean(
-    codigoEmpresa !== null && nombreEmpresa && cifDniEmpresa && emailEmpresa,
+    codigoEmpresa !== null && nombreEmpresa && cifDniEmpresa,
   );
 
   const clausulaLegal = useMemo(() => {
