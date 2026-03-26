@@ -314,7 +314,7 @@ export const ClientForm = ({
 
         <div className="shrink-0 md:self-end">
           <Button
-            disabled={!isFormValid || !rgpdAccepted || loading}
+            disabled={!rgpdAccepted || loading}
             onClick={handleGenerateInvoice}
           >
             {loading ? "Generando..." : "Generar factura"}
