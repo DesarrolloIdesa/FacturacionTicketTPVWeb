@@ -33,6 +33,7 @@ const Index = () => {
       const fecha = params.get("fecha");
       const serie = params.get("Serie");
       const numTicket = params.get("NumTicket");
+      const importe = params.get("importe") ?? params.get("Importe") ?? "";
       const nombreEmpresa = params.get("nombreEmpresa");
 
       if (nombreEmpresa) {
@@ -52,6 +53,7 @@ const Index = () => {
 
       if (serie) setTicketSeries(serie);
       if (numTicket) setTicketNumber(numTicket);
+      if (importe) setTicketAmount(importe);
 
       try {
         const res = await fetch(`${API_BASE_URL}/api/Empresa`);

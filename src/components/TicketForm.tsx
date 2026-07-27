@@ -105,13 +105,14 @@ export const TicketForm = ({
             min="0"
             placeholder="Ej: 25,50"
             value={ticketAmount}
-            onChange={(e) => {
-              const value = e.target.value;
+            readOnly
+            // onChange={(e) => {
+            //   const value = e.target.value;
 
-              if (/^\d*\.?\d{0,2}$/.test(value)) {
-                onTicketAmountChange(value);
-              }
-            }}
+            //   if (/^\d*\.?\d{0,2}$/.test(value)) {
+            //     onTicketAmountChange(value);
+            //   }
+            // }}
             className="transition-all duration-200"
           />
         </div>
