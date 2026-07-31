@@ -53,8 +53,8 @@ const Index = () => {
 
       if (serie) setTicketSeries(serie);
       if (numTicket) setTicketNumber(numTicket);
-      if (importe) setTicketAmount(importe);
-
+      if (importe) setTicketAmount(importe.replace(",", ".")); // Reemplazamos la coma por un punto para que el input type="number" lo reconozca
+      
       try {
         const res = await fetch(`${API_BASE_URL}/api/Empresa`);
         const data: Company[] = await res.json();
