@@ -20,6 +20,9 @@ export const TicketForm = ({
   ticketSeries,
   ticketAmount,
   nombreEmpresa,
+  onTicketDateChange,
+  onTicketNumberChange,
+  onTicketSeriesChange,
   onTicketAmountChange,
 }: TicketFormProps) => {
   return (
@@ -33,7 +36,7 @@ export const TicketForm = ({
         </h2>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 mb-5">
         <Label
           htmlFor="nombreEmpresa"
           className="text-sm font-medium text-foreground flex items-center gap-2"
@@ -81,7 +84,7 @@ export const TicketForm = ({
         <div className="space-y-2">
           <Label htmlFor="ticketNumber" className="text-sm font-medium text-foreground flex items-center gap-2">
             <Hash className="w-4 h-4 text-muted-foreground" />
-            Numero del Ticket
+            Número del Ticket
           </Label>
           <Input
             id="ticketNumber"
@@ -91,6 +94,7 @@ export const TicketForm = ({
             className="transition-all duration-200"
           />
         </div>
+
         <div className="space-y-2">
           <Label
             htmlFor="ticketAmount"
@@ -106,13 +110,6 @@ export const TicketForm = ({
             placeholder="Ej: 25,50"
             value={ticketAmount}
             readOnly
-            // onChange={(e) => {
-            //   const value = e.target.value;
-
-            //   if (/^\d*\.?\d{0,2}$/.test(value)) {
-            //     onTicketAmountChange(value);
-            //   }
-            // }}
             className="transition-all duration-200"
           />
         </div>

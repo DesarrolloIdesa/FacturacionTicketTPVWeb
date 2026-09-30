@@ -97,7 +97,7 @@ const Index = () => {
 
         <main className="max-w-4xl mx-auto px-4 pb-12">
           <div className="space-y-6">
-            {companies.length > 0 && (
+            {/* {companies.length > 0 && (
               <div className="card-elevated p-6 animate-fade-in-up">
                 <label htmlFor="company" className="block font-medium mb-1">
                   Empresa
@@ -115,7 +115,7 @@ const Index = () => {
                   ))}
                 </select>
               </div>
-            )}
+            )} */}
 
             <TicketForm
               ticketDate={ticketDate}
