@@ -32,10 +32,10 @@ const Index = () => {
 
       const fecha = params.get("fecha");
       const serie = params.get("Serie");
-      const numTicket = params.get("NumTicket");
+      const numTicket = params.get("NumTicket")?.replace(".", "").trim();
       const importe = params.get("importe") ?? params.get("Importe") ?? "";
       const nombreEmpresa = params.get("nombreEmpresa");
-
+      console.log("Nombre empresa from URL params:", nombreEmpresa);
       if (nombreEmpresa) {
         setNombreEmpresaParam(nombreEmpresa);
       }
@@ -61,13 +61,13 @@ const Index = () => {
         setCompanies(data);
 
         if (data.length === 0) return;
-
         const normalizedParam = normalizeCompanyValue(nombreEmpresa);
-        const matchedCompany = data.find((company) =>
-          [company.nombre, company.anagrama, company.cifDni].some(
+        const matchedCompany = data.find((company) => {
+          const match = [company.nombre, company.anagrama, company.cifDni].some(
             (value) => normalizeCompanyValue(value) === normalizedParam,
-          ),
-        );
+          );
+          return match;
+        });
 
         setSelectedCompany((matchedCompany ?? data[0]).codigoEmpresa);
       } catch (err) {
