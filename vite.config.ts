@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
     proxy: {
-      "/api": "https://facturaciontickettpvapi.azurewebsites.net"
+      "/api": "https://facttickettpvapi-campos.azurewebsites.net"
     }
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
